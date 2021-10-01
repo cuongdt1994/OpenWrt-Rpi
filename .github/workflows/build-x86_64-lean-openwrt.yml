@@ -16,8 +16,8 @@ on:
 #    types: started
 
 env:
-  TOOLCHAIN_TAG: coolsnowwolf-lede-master
-  TOOLCHAIN_NAME: toolchain-image-coolsnowwolf-lede-master-x86-64.img
+  PREBUILD_TAG: prebuild
+  PREBUILD_NAME: coolsnowwolf-lede-master-x86-64-prebuild-image.img
   CONFIG_FILE: config/x86/x86_64-lean-target.config
   DIY_SH: scripts/lean-openwrt.sh
   WEBROOT: /data/dnmp/www/openwrt.cc
@@ -63,15 +63,21 @@ jobs:
       - name: Prepare Toolchain Image
         id: prepare
         run: |
-          df -hT $PWD
-          wget -q https://github.com/SuLingGG/OpenWrt-Toolchain/releases/download/$TOOLCHAIN_TAG/$TOOLCHAIN_NAME -O toolchain-image.img
+          for i in {0..10}
+          do
+            wget https://github.com/SuLingGG/OpenWrt-Cache/releases/download/$PREBUILD_TAG/$PREBUILD_NAME.0$i || break
+          done
+          cat $PREBUILD_NAME.* > $PREBUILD_NAME
+          rm -f $PREBUILD_NAME.*
           mkdir openwrt-ro openwrt workdir overlay
-          sudo mount -o loop toolchain-image.img openwrt-ro
+          sudo mount -o loop $PREBUILD_NAME openwrt-ro
           sudo mount -t overlay overlay -o lowerdir=openwrt-ro,upperdir=overlay,workdir=workdir openwrt
           cd openwrt
           echo "OPENWRTROOT=$PWD" >> $GITHUB_ENV
           echo "::set-output name=OPENWRTROOT::$(echo $PWD)"
           git pull
+          find build_dir/{host*,toolchain-*} -name .built\* -exec touch {} \;
+          touch staging_dir/{host*,toolchain-*,target-*}/stamp/.*
 
       - name: Install Feeds
         id: feeds
@@ -105,6 +111,13 @@ jobs:
           cd $OPENWRTROOT
           echo -e "$(nproc) thread compile"
           make tools/compile -j$(nproc) || make tools/compile -j1 V=s
+
+      - name: Compile Toolchain
+        id: toolchain
+        run: |
+          cd $OPENWRTROOT
+          echo -e "$(nproc) thread compile"
+          make toolchain/compile -j$(nproc) || make toolchain/compile -j1 V=s
 
       - name: Compile Packages
         id: packages
