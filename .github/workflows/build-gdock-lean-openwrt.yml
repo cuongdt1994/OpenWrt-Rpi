@@ -76,6 +76,7 @@ jobs:
           echo "OPENWRTROOT=$PWD" >> $GITHUB_ENV
           echo "::set-output name=OPENWRTROOT::$(echo $PWD)"
           git pull
+          sed -i 's/ $(tool.*\/stamp-compile)//;' Makefile
 
       - name: Install Feeds
         id: feeds
