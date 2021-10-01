@@ -76,8 +76,6 @@ jobs:
           echo "OPENWRTROOT=$PWD" >> $GITHUB_ENV
           echo "::set-output name=OPENWRTROOT::$(echo $PWD)"
           git pull
-          find build_dir/{host*,toolchain-*} -name .built\* -exec touch {} \;
-          touch staging_dir/{host*,toolchain-*,target-*}/stamp/.*
 
       - name: Install Feeds
         id: feeds
